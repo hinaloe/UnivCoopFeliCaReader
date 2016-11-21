@@ -2,34 +2,25 @@ package com.oboenikui.campusfelica
 
 import android.icu.text.Normalizer2
 import android.nfc.Tag
-import java.io.*
+import java.io.IOException
 import java.math.BigInteger
 import java.nio.charset.Charset
 import java.util.*
+import com.oboenikui.campusfelica.ExecuteNfcF as exNfc
 
 class CampusFeliCa(private val mTag: Tag) {
 
-    fun readHistories(ex: ExecuteNfcF): List<CampusFeliCaHistory> {
-        val stream = ByteArrayOutputStream()
-        stream.write(1)
+    fun readHistories(ex: exNfc): List<CampusFeliCaHistory> {
         try {
-            stream.write(SERVICE_CODE_HISTORY)
-            stream.write(ExecuteNfcF.createBlockList(10))
-            return toCampusFeliCaHistories(ex.executeWithIdm(6, stream.toByteArray()))
+            return toCampusFeliCaHistories(ex.executeWithIdm(6, exNfc.createService(SERVICE_CODE_HISTORY) + exNfc.createBlock(10)))
         } catch (e: IOException) {
             return mutableListOf<CampusFeliCaHistory>()
         }
     }
 
-    fun readBasicInformation(ex: ExecuteNfcF): CampusFeliCaInformation? {
-        val stream = ByteArrayOutputStream()
-        stream.write(3)
+    fun readBasicInformation(ex: exNfc): CampusFeliCaInformation? {
         try {
-            stream.write(SERVICE_CODE_INFORMATION)
-            stream.write(SERVICE_CODE_BALANCE)
-            stream.write(SERVICE_CODE_UNKNOWN2)
-            stream.write(ExecuteNfcF.createBlockList(3, 1, 4))
-            return toCampusFeliCaInformation(ex.executeWithIdm(6, stream.toByteArray()))
+            return toCampusFeliCaInformation(ex.executeWithIdm(6, exNfc.createService(SERVICE_CODE_INFORMATION, SERVICE_CODE_BALANCE) + exNfc.createBlock(3, 1)))
         } catch (e: IOException) {
             return null
         }
@@ -37,15 +28,13 @@ class CampusFeliCa(private val mTag: Tag) {
 
     fun readData(): Pair<CampusFeliCaInformation, List<CampusFeliCaHistory>>? {
         try {
-            ExecuteNfcF(mTag).use {
+            exNfc(mTag).use {
                 it.connect()
                 val info = readBasicInformation(it) ?: return null
                 val histories = readHistories(it)
-                //                val profile = readOther(it)
                 return info to histories
             }
         } catch(e: IOException) {
-            e.printStackTrace()
             return null
         }
     }
@@ -92,7 +81,7 @@ class CampusFeliCa(private val mTag: Tag) {
 
     inner class CampusFeliCaHistory(val calendar: Calendar, val isPayment: Boolean, val price: Int, val balance: Int)
 
-    inner class CampusFeliCaInformation(val coopId: String, val isMemberId: Boolean, val lastMealDate: Calendar, val mealBalance: Int, val point: Double, val balance: Long, val name: String)
+    inner class CampusFeliCaInformation(val coopId: String, val isMemberId: Boolean, val lastMealDate: Calendar, val mealUsed: Int, val point: Double, val balance: Long, val name: String)
 
     companion object {
         val SERVICE_CODE_HISTORY = byteArrayOf(0xcf.toByte(), 0x50.toByte())
