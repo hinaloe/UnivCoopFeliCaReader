@@ -20,7 +20,7 @@ class CampusFeliCa(private val mTag: Tag) {
 
     fun readBasicInformation(ex: exNfc): CampusFeliCaInformation? {
         try {
-            return toCampusFeliCaInformation(ex.executeWithIdm(6, exNfc.createService(SERVICE_CODE_INFORMATION, SERVICE_CODE_BALANCE) + exNfc.createBlock(3, 1)))
+            return toCampusFeliCaInformation(ex.executeWithIdm(6, exNfc.createService(SERVICE_CODE_INFORMATION, SERVICE_CODE_BALANCE, SERVICE_CODE_UNKNOWN2) + exNfc.createBlock(3, 1, 4)))
         } catch (e: IOException) {
             return null
         }
@@ -79,9 +79,19 @@ class CampusFeliCa(private val mTag: Tag) {
         return list
     }
 
+    private fun toCampusFeliCaOwner(result: ByteArray?): CampusFeliCaOwner? {
+        if (result == null || result.size != 0x4d || result[12] != 4.toByte()) {
+            return null
+        }
+        return CampusFeliCaOwner(Normalizer2.getNFKCInstance().normalize(result.copyOfRange(29, 44).toString(Charset.forName("Shift_JIS"))))
+
+    }
+
     inner class CampusFeliCaHistory(val calendar: Calendar, val isPayment: Boolean, val price: Int, val balance: Int)
 
     inner class CampusFeliCaInformation(val coopId: String, val isMemberId: Boolean, val lastMealDate: Calendar, val mealUsed: Int, val point: Double, val balance: Long, val name: String)
+
+    inner class CampusFeliCaOwner(val name: String)
 
     companion object {
         val SERVICE_CODE_HISTORY = byteArrayOf(0xcf.toByte(), 0x50.toByte())
