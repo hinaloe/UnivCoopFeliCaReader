@@ -53,7 +53,7 @@ class CampusFeliCa(private val mTag: Tag) {
                 toInt(result[34], result[35], result[36]),
                 BigInteger(1, byteArrayOf(result[45], result[46], result[47], result[48])).toLong() / 10.0,
                 BigInteger(1, byteArrayOf(result[64], result[63], result[62], result[61])).toLong(),
-                Normalizer2.getNFKCInstance().normalize(result.copyOfRange(93, 108).toString(Charset.forName("Shift_JIS")))
+                Normalizer2.getNFKCInstance().normalize(result.copyOfRange(93, 108).toString(Charset.forName("Shift_JIS"))))
     }
 
     private fun toCampusFeliCaHistories(result: ByteArray?): List<CampusFeliCaHistory> {
