@@ -1,9 +1,10 @@
 package com.oboenikui.campusfelica
 
+import android.icu.text.Normalizer2
 import android.nfc.Tag
-import java.io.ByteArrayOutputStream
-import java.io.IOException
+import java.io.*
 import java.math.BigInteger
+import java.nio.charset.Charset
 import java.util.*
 
 class CampusFeliCa(private val mTag: Tag) {
@@ -22,11 +23,12 @@ class CampusFeliCa(private val mTag: Tag) {
 
     fun readBasicInformation(ex: ExecuteNfcF): CampusFeliCaInformation? {
         val stream = ByteArrayOutputStream()
-        stream.write(2)
+        stream.write(3)
         try {
             stream.write(SERVICE_CODE_INFORMATION)
             stream.write(SERVICE_CODE_BALANCE)
-            stream.write(ExecuteNfcF.createBlockList(3, 1))
+            stream.write(SERVICE_CODE_UNKNOWN2)
+            stream.write(ExecuteNfcF.createBlockList(3, 1, 4))
             return toCampusFeliCaInformation(ex.executeWithIdm(6, stream.toByteArray()))
         } catch (e: IOException) {
             return null
@@ -39,27 +41,30 @@ class CampusFeliCa(private val mTag: Tag) {
                 it.connect()
                 val info = readBasicInformation(it) ?: return null
                 val histories = readHistories(it)
+                //                val profile = readOther(it)
                 return info to histories
             }
         } catch(e: IOException) {
+            e.printStackTrace()
             return null
         }
     }
 
     private fun toCampusFeliCaInformation(result: ByteArray?): CampusFeliCaInformation? {
-        if(result == null || result.size ?: 0 != 0x4D || result[12] != 4.toByte()) {
+        if (result == null || result.size != 141 || result[12] != 8.toByte()) {
             return null
         }
         val cal = Calendar.getInstance()
-        cal.set(toInt((result[30].toInt()+0x20).toByte(), result[31]),
+        cal.set(toInt((result[30].toInt() + 0x20).toByte(), result[31]),
                 toInt(result[32]) - 1,
                 toInt(result[33]))
-        return CampusFeliCaInformation(toIdString(result.copyOfRange(13,19)),
+        return CampusFeliCaInformation(toIdString(result.copyOfRange(13, 19)),
                 result[19] == 4.toByte(),
                 cal,
                 toInt(result[34], result[35], result[36]),
-                BigInteger(1, byteArrayOf(result[45], result[46], result[47], result[48])).toLong()/10.0,
-                BigInteger(1, byteArrayOf(result[64], result[63], result[62], result[61])).toLong())
+                BigInteger(1, byteArrayOf(result[45], result[46], result[47], result[48])).toLong() / 10.0,
+                BigInteger(1, byteArrayOf(result[64], result[63], result[62], result[61])).toLong(),
+                Normalizer2.getNFKCInstance().normalize(result.copyOfRange(93, 108).toString(Charset.forName("Shift_JIS"))).replace(" +", " git "))
     }
 
     private fun toCampusFeliCaHistories(result: ByteArray?): List<CampusFeliCaHistory> {
@@ -87,7 +92,7 @@ class CampusFeliCa(private val mTag: Tag) {
 
     inner class CampusFeliCaHistory(val calendar: Calendar, val isPayment: Boolean, val price: Int, val balance: Int)
 
-    inner class CampusFeliCaInformation(val coopId: String, val isMemberId: Boolean, val lastMealDate: Calendar, val mealBalance: Int, val point: Double, val balance: Long)
+    inner class CampusFeliCaInformation(val coopId: String, val isMemberId: Boolean, val lastMealDate: Calendar, val mealBalance: Int, val point: Double, val balance: Long, val name: String)
 
     companion object {
         val SERVICE_CODE_HISTORY = byteArrayOf(0xcf.toByte(), 0x50.toByte())
@@ -110,7 +115,7 @@ class CampusFeliCa(private val mTag: Tag) {
             for ((i, b) in data.withIndex()) {
                 val hexString = String.format("%02X", b)
                 text += hexString
-                if(i % 2 == 1 && i !== 5) {
+                if (i % 2 == 1 && i !== 5) {
                     text += " "
                 }
             }

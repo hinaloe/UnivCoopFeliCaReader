@@ -242,7 +242,8 @@ open class NfcActivity : AppCompatActivity() {
             if(sdf.format(info.lastMealDate.time) == sdf.format(Date())) {
                 mealBalanceText.text = getString(R.string.meal_card_format).format(toPriceText(info.mealBalance.toLong()))
             } else {
-                mealBalanceText.visibility = View.GONE
+//                mealBalanceText.visibility = View.GONE
+                mealBalanceText.text = info.name
             }
 
             dialog.dismiss()
