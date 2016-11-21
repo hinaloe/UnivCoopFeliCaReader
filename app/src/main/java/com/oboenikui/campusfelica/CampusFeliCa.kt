@@ -79,19 +79,9 @@ class CampusFeliCa(private val mTag: Tag) {
         return list
     }
 
-    private fun toCampusFeliCaOwner(result: ByteArray?): CampusFeliCaOwner? {
-        if (result == null || result.size != 0x4d || result[12] != 4.toByte()) {
-            return null
-        }
-        return CampusFeliCaOwner(Normalizer2.getNFKCInstance().normalize(result.copyOfRange(29, 44).toString(Charset.forName("Shift_JIS"))))
-
-    }
-
     inner class CampusFeliCaHistory(val calendar: Calendar, val isPayment: Boolean, val price: Int, val balance: Int)
 
     inner class CampusFeliCaInformation(val coopId: String, val isMemberId: Boolean, val lastMealDate: Calendar, val mealUsed: Int, val point: Double, val balance: Long, val name: String)
-
-    inner class CampusFeliCaOwner(val name: String)
 
     companion object {
         val SERVICE_CODE_HISTORY = byteArrayOf(0xcf.toByte(), 0x50.toByte())
